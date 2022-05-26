@@ -1,0 +1,20 @@
+server:
+  port: 8081
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8081/eureka
+    fetch-registry: false
+    register-with-eureka: false
+  instance:
+    hostname: localhost
+
+  #Ajusta o Logging level
+  spring:
+    logging:
+      level:
+        root: INFO
+        org.springframework.security: DEBUG
+        org.springframework.security.oauth2: DEBUG
+        web: DEBUG

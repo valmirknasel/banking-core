@@ -1,0 +1,59 @@
+#security based configurations
+app:
+  config:
+    # endereco do keycloak e o nome do realm onde o client esta configurado no keycloak
+    keycloak:
+      url: http://localhost:8080/auth
+      realm: apocalipse
+
+
+server:
+  port: 8083
+  # port: 0 #define uma porta aleatoria disponivel no sistema
+
+spring:
+  application:
+    name: internet-banking-user-service
+  main:
+    allow-bean-definition-overriding: true
+
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            token-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/token
+            authorization-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/auth
+            user-name-attribute: preferred_username
+            user-info-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/userinfo
+            jwk-set-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/certs
+            user-info-authentication-method: header
+        registration:
+          #nome arbitrario para registrar o client
+          internet-banking-user-service:
+            provider: keycloak
+            client-id: internet-banking-user-service
+            client-secret: c8012fb1-e38c-4010-936c-26915ea41483
+            authorization-grant-type: authorization_code
+            # redireciona para a pagina de login no navegador
+            redirect-uri: http://localhost:8083/login/oauth2/code/keycloak
+            # se apontar para o keycloak "http://localhost:8080/", após o login no keycloak aparece o erro 404 - not found
+            #redirect-uri: http://localhost:8080/login/oauth2/code/keycloak
+            scope: openid
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/certs
+          issuer-uri: ${app.config.keycloak.url}/realms/apocalipse
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8081/eureka
+
+#Ajusta o Logging level
+logging:
+  level:
+    root: INFO
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    web: DEBUG

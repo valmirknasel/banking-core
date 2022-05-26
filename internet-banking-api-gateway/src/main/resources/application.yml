@@ -1,0 +1,101 @@
+# define a porta do servidor
+server:
+  port: 8082
+
+#security based configurations
+app:
+  config:
+    # endereco do keycloak e o nome do realm onde o client esta configurado no keycloak
+    keycloak:
+      url: http://localhost:8080/auth
+      realm: apocalipse
+      client-id: internet-banking-api-gateway
+      client-secret: 136cd38f-497d-4239-8f97-2644ac57570e
+
+    # configuracoes do eureka service discovery
+    eureka:
+      port: 8081
+      host: http://localhost:${app.config.eureka.port}/eureka
+
+    # configuracoes do client
+
+
+# nome da aplicacao que vai ser registrado no service registry
+spring:
+  application:
+    name: internet-banking-api-gateway
+
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            token-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/token
+            authorization-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/auth
+            user-name-attribute: preferred_username
+            user-info-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/userinfo
+            jwk-set-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/certs
+            user-info-authentication-method: header
+
+        registration:
+          #nome arbitrario para registrar o client
+          internet-banking-api-gateway:
+            provider: keycloak
+            client-id: ${app.config.keycloak.client-id}
+            client-secret: ${app.config.keycloak.client-secret}
+            authorization-grant-type: authorization_code
+            # redireciona para a pagina de login a partir deste servidor
+            redirect-uri: http://localhost:${server.port}/login/oauth2/code/keycloak
+            scope: openid
+
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${app.config.keycloak.url}/realms/${app.config.keycloak.realm}/protocol/openid-connect/certs
+
+  #configuracao das rotas para os servicos
+  cloud:
+    gateway:
+      routes:
+        # rota para o user service
+        - id: internet-banking-user-service
+          # usa o loadbalancer para redirecionar para o service pelo seu application name
+          uri: lb://internet-banking-user-service
+          # rotas de redirecionamento para o microservice
+          predicates:
+            - Path=/user/**
+          filters:
+            # remove o "predicate" da requisicao
+            - StripPrefix=1
+
+        # rota para o fund transfer service
+        - id: internet-banking-fund-transfer-service
+          uri: lb://internet-banking-fund-transfer-service
+          predicates:
+            - Path=/fund-transfer/**
+          filters:
+            # - StripPrefix=1
+
+        # rota para o user service
+        - id: resource-server-demo
+          # usa o loadbalancer para redirecionar para o service pelo seu application name
+          uri: lb://resource-server-demo
+          # rotas de redirecionamento para o microservice
+          predicates:
+            - Path=/user-resource-server/**
+          filters:
+          # remove o "predicate" da requisicao
+            - StripPrefix=1
+
+# aponta o endereco do service registry
+eureka:
+  client:
+    service-url:
+      defaultZone: ${app.config.eureka.host}
+
+#Ajusta o Logging level
+logging:
+  level:
+    root: INFO
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    web: DEBUG
